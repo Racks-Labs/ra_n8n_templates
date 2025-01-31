@@ -1,0 +1,1247 @@
+{
+  "name": "Automatizacion Ana Facturas",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "e5649a2b-6e12-4cc4-8001-4639cc9cc2c2",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $input.item.binary.attachment_0.mimeType }}",
+              "rightValue": "application/pdf"
+            },
+            {
+              "id": "4c57ab9b-b11c-455a-a63d-daf48418b06e",
+              "operator": {
+                "type": "array",
+                "operation": "notContains",
+                "rightType": "any"
+              },
+              "leftValue": "={{ $json.labels }}",
+              "rightValue": "invoice synced"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ece160ab-a2ce-4ebc-9107-c1db0f355c73",
+      "name": "Should Process Email?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2200,
+        580
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "labelIds",
+        "options": {}
+      },
+      "id": "59ba21fa-45ce-469d-a519-471aebca541a",
+      "name": "Split Out Labels",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        1520,
+        580
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "operation": "get",
+        "labelId": "={{ $json.labelIds }}"
+      },
+      "id": "b7e9c615-a868-40ba-a714-e1bc92f50a8a",
+      "name": "Get Labels Names",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        1520,
+        780
+      ],
+      "typeVersion": 2.1,
+      "webhookId": "18c08f14-d490-400d-aaff-5ea9f6b17230",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "3UEWHW5bwxmA8jHG",
+          "name": "Facturas Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "name",
+              "renameField": true,
+              "outputFieldName": "labels"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bb03b787-9b84-4e72-a004-476960c6783f",
+      "name": "Combine Label Names",
+      "type": "n8n-nodes-base.aggregate",
+      "position": [
+        1520,
+        1000
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "cf98b2a2-6559-4d17-aa61-f73edad9db13",
+      "name": "Email with Label Names",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        1860,
+        260
+      ],
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "Label_35464262546575265"
+          ],
+          "q": "has:attachment"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "id": "145397e8-2168-49b0-9b6c-0aaae948ccf4",
+      "name": "Receiving Invoices",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "position": [
+        1280,
+        580
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "3UEWHW5bwxmA8jHG",
+          "name": "Facturas Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchema": "{\n    \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n    \"type\": \"object\",\n    \"properties\": {\n        \"Fecha\": {\n            \"type\": \"string\",\n            \"description\": \"Fecha de emisión de la factura en formato 'dd/mm/yyyy'.\"\n        },\n        \"Factura\": {\n            \"type\": \"string\",\n            \"description\": \"Número de la factura, actúa como identificador de la factura.\"\n        },\n        \"Sujeto\": {\n            \"type\": \"string\",\n            \"description\": \"Nombre del proveedor que ha emitido la factura.\"\n        },\n        \"Direccion\": {\n            \"type\": \"string\",\n            \"description\": \"Direccion en el que solamente estan la calle y el numero del sujeto.\"\n        },\n        \"Codigo Postal\": {\n            \"type\": \"string\",\n            \"description\": \"Codigo Postal del sujeto.\"\n        },\n        \"Poblacion\": {\n            \"type\": \"string\",\n            \"description\": \"Poblacion del sujeto. Deducelo si es necesario del Codigo Postal.\"\n        },\n        \"Provincia\": {\n            \"type\": \"string\",\n            \"description\": \"Provincia o Estado del sujeto. Deducelo si es necesario del Codigo Postal y Poblacion.\"\n        },\n        \"Pais\": {\n            \"type\": \"string\",\n            \"description\": \"Pais del sujeto. Deducelo si es necesario de la Provincia, Poblacion y Codigo Postal.\"\n        },\n        \"NRT\": {\n            \"type\": \"string\",\n            \"description\": \"Número de Registro Tributario del proveedor que ha emitido la factura.\"\n        },\n        \"Base1\": {\n            \"type\": \"number\",\n            \"description\": \"Primera base imponible si existe, con una precisión de dos decimales.\"\n        },\n        \"Base2\": {\n            \"type\": \"number\",\n            \"description\": \"Segunda base imponible si existe, con una precisión de dos decimales.\"\n        },\n        \"Base3\": {\n            \"type\": \"number\",\n            \"description\": \"Tercera base imponible si existe, con una precisión de dos decimales.\"\n        },\n        \"PorceIGI1\": {\n            \"type\": \"number\",\n            \"description\": \"Porcentaje de IGI aplicado a la base imponible 1, con una precisión de dos decimales.\"\n        },\n        \"PorceIGI2\": {\n            \"type\": \"number\",\n            \"description\": \"Porcentaje de IGI aplicado a la base imponible 2, con una precisión de dos decimales.\"\n        },\n        \"PorceIGI3\": {\n            \"type\": \"number\",\n            \"description\": \"Porcentaje de IGI aplicado a la base imponible 3, con una precisión de dos decimales.\"\n        },\n        \"CuotaIGI1\": {\n            \"type\": \"number\",\n            \"description\": \"Cuota del IGI sobre la base imponible 1, con una precisión de dos decimales.\"\n        },\n        \"CuotaIGI2\": {\n            \"type\": \"number\",\n            \"description\": \"Cuota del IGI sobre la base imponible 2, con una precisión de dos decimales.\"\n        },\n        \"CuotaIGI3\": {\n            \"type\": \"number\",\n            \"description\": \"Cuota del IGI sobre la base imponible 3, con una precisión de dos decimales.\"\n        },\n        \"TotalFactura\": {\n            \"type\": \"number\",\n            \"description\": \"Total de la factura, con una precisión de dos decimales.\"\n        },\n        \"Descripcion\": {\n            \"type\": \"string\",\n            \"description\": \"Descripcion resumen de todas las partidas de la factura.\"\n        }\n    },\n    \"required\": [\n        \"Fecha\",\n        \"Factura\",\n        \"Sujeto\",\n        \"Direccion\",\n        \"Codigo Postal\",\n        \"Poblacion\",\n        \"Provincia\",\n        \"Pais\",\n        \"NRT\",\n        \"Base1\",\n        \"PorceIGI1\",\n        \"CuotaIGI1\",\n        \"TotalFactura\"\n    ]\n}\n"
+      },
+      "id": "98648905-0082-4183-8468-b23c7bb30387",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        4340,
+        980
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "83f55f01-5418-4f16-a52b-ca52a487c023",
+      "name": "Auto-fixing Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "position": [
+        4060,
+        820
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "74f6c727-6fd9-411d-ae26-1af2b6943a3a",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        3920,
+        980
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "MVltSHtuc5Fx0AiI",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "4f8f1e98-97bb-42ca-b92c-5663efa25815",
+      "name": "OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        3700,
+        960
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "MVltSHtuc5Fx0AiI",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $json.output }}",
+        "options": {}
+      },
+      "id": "eb0738ac-02d1-4355-8d75-5ec1fa8c0996",
+      "name": "Map Output",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        4520,
+        380
+      ],
+      "typeVersion": 3.3
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "binaryPropertyName": "attachment_0",
+        "options": {
+          "encoding": "utf8"
+        }
+      },
+      "id": "261f4d04-555f-407d-9ed4-a152a36384d6",
+      "name": "To base64",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        560
+      ],
+      "notes": "Se transforma el PDF a base64 ya que así es como lo requiere la API de Claude."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const jsonObject = {\n    model: \"claude-3-5-sonnet-20241022\",\n    max_tokens: 1024,\n    system: \"Dada una factura, extrae la siguiente información según lo listado a continuación.\\nSi no puedes obtener la información para un elemento específico, déjalo en blanco y pasa al siguiente:\\n\\n- Fecha de emisión o de vencimiento de la factura.\\n- Número de la factura: Actúa como identificador de la factura\\n- Sujeto de la factura (nombre del proveedor que ha emitido la factura que nunca sera Racks Labs sino el otro).\\n- NRT del sujeto: Número de Registro Tributario del proveedor que ha emitido la factura.\\n- Direccion del sujeto: Direccion en el que solamente estan la calle y el numero del sujeto.\\n- Codigo Postal del sujeto.\\n- Poblacion del sujeto: Deducelo si es necesario del Codigo Postal.\\n- Provincia o Estado del sujeto: Deducelo si es necesario del Codigo Postal y Poblacion.\\n- Pais del sujeto: Deducelo si es necesario de la Provincia, Poblacion y Codigo Postal.\\n- Base imponible 1: Primera base imponible si existe.\\n- Base imponible 2: Segunda base imponible si existe.- Base imponible 3: Tercera base imponible si existe.\\n- Porcentaje de IGI aplicado a la base imponible 1.\\n- Porcentaje de IGI aplicado a la base imponible 2.\\n- Porcentaje de IGI aplicado a la base imponible 3.\\n- Cuota del IGI sobre la base imponible 1.\\n- Cuota del IGI sobre la base imponible 2.\\n- Cuota del IGI sobre la base imponible 3.\\n- Total de la factura.\\n- Descripcion: resumen del concepto de la factura.\",\n    messages: [{\n        role: \"user\",\n        content: [\n            {\n                type: \"document\",\n                source: {\n                    type: \"base64\",\n                    media_type: \"application/pdf\",\n                    data: $json.data\n                }\n            }\n        ]\n    }]\n};\n\nreturn jsonObject;\n"
+      },
+      "id": "c2ce91de-2c07-4260-b1af-f40b982db430",
+      "name": "Create JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3020,
+        560
+      ],
+      "notes": "Este nodo crea el JSON que se enviará como body en la petición a la API de Claude."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "pdfs-2024-09-25"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "=json",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "jsonBody": "={{ $json.toJsonString() }}",
+        "options": {}
+      },
+      "id": "680be82f-766d-46a1-81e7-4750ed49963c",
+      "name": "Extract data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3280,
+        560
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "credentials": {
+        "anthropicApi": {
+          "id": "FteCPYkCZLcGu3tH",
+          "name": "Anthropic account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Este nodo realiza la petición HTTP a la API con las cabeceras necesarias para usar la función \"PDF support\"."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f8ee6d02-2458-4b0c-97a5-02e9f7b140bd",
+              "name": "albaranes",
+              "value": "=[]",
+              "type": "array"
+            },
+            {
+              "id": "d94c105c-7fb7-4ed0-903a-637abcc55211",
+              "name": "Fecha",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "3413f2db-a832-469e-a19c-2c4159fae01b",
+              "name": "Sujeto",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "01d98fca-ab2f-4ef1-b44f-72e99258f757",
+              "name": "NRT",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "cfe396cb-9e06-40b5-a648-3ed8a5825436",
+              "name": "Base1",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "00cadc38-7d78-497e-b2fb-ed3c271733ed",
+              "name": "Base2",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "ce4e26a1-7568-4ce3-b5a0-ff7c0cd4cf4f",
+              "name": "Base3",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "05028e21-2ad4-4e2c-b81e-9dd3df131350",
+              "name": "PorceIGI1",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "b741d96b-8f73-4255-8b3c-340f20903841",
+              "name": "PorceIGI2",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "12121490-c4b5-47ad-ace8-f4fd4b1f918e",
+              "name": "PorceIGI3",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "00974399-cd4c-40f4-85d3-9286411e2f03",
+              "name": "CuotaIGI1",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "52561ed8-db22-4e38-ba64-58f955496ea3",
+              "name": "CuotaIGI2",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "50b96267-9fcd-4857-a4fa-1affacae27cd",
+              "name": "CuotaIGI3",
+              "value": "=",
+              "type": "string"
+            },
+            {
+              "id": "bea9599f-988c-40ee-9b42-3a57f44565bc",
+              "name": "TotalFactura",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "16f694e3-c8fb-4bb4-8695-50477b3eb682",
+      "name": "Manage error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4520,
+        640
+      ],
+      "alwaysOutputData": true,
+      "notes": "En caso de que ocurra algún tipo de error en la petición a Claude y a OpenAi, este nodo se ocupará de que el flujo siga adelante creando un JSON vacío."
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Receiving Invoices').item.json.id }}",
+        "labelIds": [
+          "Label_907669258271742496"
+        ]
+      },
+      "id": "4d42c55a-015c-4b4a-ac52-84c347c11f0e",
+      "name": "Add \"invoice synced\" Label",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        5800,
+        640
+      ],
+      "typeVersion": 2.1,
+      "webhookId": "88917ed7-997d-41e4-849b-530eb29a4978",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "3UEWHW5bwxmA8jHG",
+          "name": "Facturas Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Automatización de facturas\n\n**Este flujo de trabajo realiza lo siguiente:**\n* **Espera correos electrónicos con facturas que tengan archivos PDF adjuntos.**\n* **Convierte el PDF a base64 requerido por la API de Claude.**\n* **Crea el JSON que se mandará como prompt a al modelo de Claude**\n* **Hace la petición HTTP con los parámetros necesarios para usar la funcionalidad \"PDF support\" de Claude Sonnet 3.5.**\n* **Los datos extraídos por Claude son procesados y parseados por un modelo de OpenAi para sacar un JSON con los datos extraídos.**\n* **Deja los datos preparados para hacer una petición a vuestra API particular.**\n\n### Requerimientos previos\n* **Es necesario crear la etiqueta \"invoice synced\" en Gmail antes de usar este flujo de trabajo. En caso de preferir otra etiqueta, se debe cambiar en el nodo \"Should Process Email\" y 'Add \"invoice sync\" label'.**\n\n",
+        "height": 413,
+        "width": 660,
+        "color": 5
+      },
+      "id": "b9684d9b-ad38-4190-a44d-a773f9495f33",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        400,
+        440
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n**Si se utiliza una etiqueta distinta a \"invoice synced\", se debe cambiar el nombre de la etiqueta en este nodo**.",
+        "height": 280,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2140,
+        540
+      ],
+      "typeVersion": 1,
+      "id": "da2451bd-2618-41b3-9967-1f509905fb62",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n**Si se utiliza una etiqueta distinta a \"invoice synced\", se debe cambiar el nombre de la etiqueta en este nodo**.",
+        "height": 280,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5360,
+        600
+      ],
+      "typeVersion": 1,
+      "id": "85b7ee35-e170-46b3-a201-c8357868b803",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Obtener PDF\n\n**En esta sección se obtiene el PDF de la factura recibida al correo electrónico.**",
+        "height": 980,
+        "width": 1220,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1180,
+        200
+      ],
+      "typeVersion": 1,
+      "id": "3663f941-c0fc-418c-961e-5d85d5f6ce94",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n**Este nodo se debe sustituir por la petición a la API final.**",
+        "height": 240,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4760,
+        600
+      ],
+      "typeVersion": 1,
+      "id": "1f7e0298-3683-4dc7-ab09-04a2223399bc",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n**Este nodo contiene el system prompt que se le envía al modelo para que este extraiga los datos especificados. Si se necesita que el modelo extraiga algún dato más, se debe modificar el system prompt en este nodo.**",
+        "height": 340,
+        "width": 220,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2740,
+        540
+      ],
+      "typeVersion": 1,
+      "id": "33064f79-bdbe-4a12-aae3-19fbafec9fde",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Extraer datos del PDF\n\n**En esta sección se extraen los datos del PDF usando la opción de \"PDF Support\" de modelo Claude 3.5 Sonnet.**",
+        "height": 620,
+        "width": 760,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2500,
+        380
+      ],
+      "typeVersion": 1,
+      "id": "61aefd60-b2cd-4fb8-845a-ea51ac9693c4",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Parsear datos\n**Esta sección pasea los datos extraídos por Claude a un formato estructurado.**",
+        "height": 1080,
+        "width": 1300,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3340,
+        200
+      ],
+      "typeVersion": 1,
+      "id": "3a56c791-d869-454b-9906-18614e1aad9d",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14Foj375P89WeVx7r7Q9sWnQMg0MVMECJXPUz7G8-pL0",
+          "mode": "list",
+          "cachedResultName": "Importar Compras",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14Foj375P89WeVx7r7Q9sWnQMg0MVMECJXPUz7G8-pL0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 84069464,
+          "mode": "list",
+          "cachedResultName": "Holded",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14Foj375P89WeVx7r7Q9sWnQMg0MVMECJXPUz7G8-pL0/edit#gid=84069464"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha dd/mm/yyyy": "={{ $json.Fecha }}",
+            "Fecha de vencimiento dd/mm/yyyy": "={{ $json.Fecha }}",
+            "Descripción": "={{ $json.Descripcion }}",
+            "Nombre del contacto": "={{ $json.Sujeto }}",
+            "NIF": "={{ $json.NRT }}",
+            "Num factura": "={{ $json.Factura }}",
+            "Dirección": "={{ $json.Direccion }}",
+            "Población": "={{ $json.Poblacion }}",
+            "Código postal": "={{ $json['Codigo Postal'] }}",
+            "Provincia": "={{ $json.Provincia }}",
+            "País": "={{ $json.Pais }}",
+            "Concepto": "={{ $json.Descripcion }}",
+            "Cantidad cobrada": "={{ $json.TotalFactura }}",
+            "Retención %": "={{ $json.PorceIGI1 }}",
+            "Fecha de cobro": "={{ $json.Fecha }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Num factura",
+              "displayName": "Num factura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fecha dd/mm/yyyy",
+              "displayName": "Fecha dd/mm/yyyy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fecha de vencimiento dd/mm/yyyy",
+              "displayName": "Fecha de vencimiento dd/mm/yyyy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Descripción",
+              "displayName": "Descripción",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nombre del contacto",
+              "displayName": "Nombre del contacto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NIF",
+              "displayName": "NIF",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Dirección",
+              "displayName": "Dirección",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Población",
+              "displayName": "Población",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Código postal",
+              "displayName": "Código postal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Provincia",
+              "displayName": "Provincia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "País",
+              "displayName": "País",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Concepto",
+              "displayName": "Concepto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Descripción del producto",
+              "displayName": "Descripción del producto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SKU",
+              "displayName": "SKU",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Precio unidad",
+              "displayName": "Precio unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unidades",
+              "displayName": "Unidades",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Descuento %",
+              "displayName": "Descuento %",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Retención %",
+              "displayName": "Retención %",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Operación",
+              "displayName": "Operación",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cantidad cobrada",
+              "displayName": "Cantidad cobrada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fecha de cobro",
+              "displayName": "Fecha de cobro",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cuenta de pago",
+              "displayName": "Cuenta de pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tags separados por -",
+              "displayName": "Tags separados por -",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nombre cuenta de gasto",
+              "displayName": "Nombre cuenta de gasto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Num. Cuenta de gasto",
+              "displayName": "Num. Cuenta de gasto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Moneda",
+              "displayName": "Moneda",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cambio de moneda",
+              "displayName": "Cambio de moneda",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Almacén",
+              "displayName": "Almacén",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "useAppend": true
+        }
+      },
+      "id": "e76048e8-30c6-495c-bc5b-56a27c8344f7",
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        5020,
+        640
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0LqAfgGafbwQONfj",
+          "name": "jaime.serrano@rackslabs - Google Sheets "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Dada la factura en la etiqueta XML <invoice>, extrae la siguiente información según lo listado a continuación.\nSi no puedes obtener la información para un elemento específico, déjalo en blanco y pasa al siguiente:\n- Lista de albaranes: Para cada albarán, extraer:\n  - Fecha: La fecha del albarán en formato \"dd/mm/yyyy\". Si ves que el formato está en fecha inglesa, corrígelo.\n  - Referencia: Un identificador único del albarán en formato de texto.\n  - Importe: El valor del albarán con una precisión de dos decimales.\n- Fecha de emisión de la factura, en formato \"dd/mm/yyyy\". Si ves que el formato está en fecha inglesa, corrígelo.\n- Número de la factura: Actúa como identificador de la factura\n- Sujeto de la factura (nombre del proveedor que ha emitido la factura): Este valor generalmente aparece en la parte inicial de los datos, ponlo siempre en mayúsculas.\n- NRT del sujeto: Número de Registro Tributario del proveedor que ha emitido la factura.\n- Base imponible 1: Primera base imponible si existe, con una precisión de dos decimales.\n- Base imponible 2: Segunda base imponible si existe, con una precisión de dos decimales.\n- Base imponible 3: Tercera base imponible si existe, con una precisión de dos decimales.\n- Porcentaje de IGI aplicado a la base imponible 1, con una precisión de dos decimales.\n- Porcentaje de IGI aplicado a la base imponible 2, con una precisión de dos decimales.\n- Porcentaje de IGI aplicado a la base imponible 3, con una precisión de dos decimales.\n- Cuota del IGI sobre la base imponible 1, con una precisión de dos decimales.\n- Cuota del IGI sobre la base imponible 2, con una precisión de dos decimales.\n- Cuota del IGI sobre la base imponible 3, con una precisión de dos decimales.\n- Total de la factura, con una precisión de dos decimales.\n\n<invoice>{{ $json.content[0].text }}</invoice>",
+        "hasOutputParser": true
+      },
+      "id": "9b945f54-5e1a-4afb-9af8-f0d367bec427",
+      "name": "Parse data",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        3800,
+        380
+      ],
+      "typeVersion": 1.4,
+      "retryOnFail": true,
+      "alwaysOutputData": false,
+      "maxTries": 5,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput",
+      "notes": "Este nodo se encarga de pasear y organizar los datos que ha extraído Claude."
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Receiving Invoices').item.json.id }}",
+        "labelIds": [
+          "Label_35464262546575265"
+        ]
+      },
+      "id": "1ba8b0e3-a640-4d6a-977d-98abe069a04e",
+      "name": "Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        6080,
+        640
+      ],
+      "webhookId": "92be6509-9ba4-49ea-b1e5-964fe408be7a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "3UEWHW5bwxmA8jHG",
+          "name": "Facturas Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "name": "={{ $('Map Output').item.json.Sujeto }}_{{ $today.format('yyyy-MM-dd') }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "19diHy07bKwK_LHRrRMXuKGaAyLF0kEU-",
+          "mode": "list",
+          "cachedResultName": "No contabilizadas",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/19diHy07bKwK_LHRrRMXuKGaAyLF0kEU-"
+        },
+        "options": {}
+      },
+      "id": "daa9c763-aba9-4a47-be3b-74810e99a896",
+      "name": "Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        5460,
+        640
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "QnB7Ghlyk9QrSPC4",
+          "name": "jaime.serrano@rackslabs.com - Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "dac2cb34-e336-4e58-932f-bbf000520552",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        5240,
+        1000
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Split Out Labels": {
+      "main": [
+        [
+          {
+            "node": "Get Labels Names",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Labels Names": {
+      "main": [
+        [
+          {
+            "node": "Combine Label Names",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Label Names": {
+      "main": [
+        [
+          {
+            "node": "Email with Label Names",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Email with Label Names": {
+      "main": [
+        [
+          {
+            "node": "Should Process Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receiving Invoices": {
+      "main": [
+        [
+          {
+            "node": "Split Out Labels",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email with Label Names",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-fixing Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Parse data",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Parse data",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Output": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Process Email?": {
+      "main": [
+        [
+          {
+            "node": "To base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To base64": {
+      "main": [
+        [
+          {
+            "node": "Create JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create JSON": {
+      "main": [
+        [
+          {
+            "node": "Extract data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract data": {
+      "main": [
+        [
+          {
+            "node": "Parse data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manage error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manage error": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse data": {
+      "main": [
+        [
+          {
+            "node": "Map Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manage error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add \"invoice synced\" Label": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Add \"invoice synced\" Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "EUHaSRQYhkuedFb6"
+  },
+  "versionId": "204532b2-c883-4717-b83a-261622c2c5e1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9c4e017b49de9e586875a9b2861e43dc05e2d8c68e3bb75ddb56a52ad05cc641"
+  },
+  "id": "pXrZ3ziGWLXwaii1",
+  "tags": [
+    {
+      "createdAt": "2024-12-16T16:51:05.907Z",
+      "updatedAt": "2024-12-16T16:51:05.907Z",
+      "id": "zgIS2ipG5Vf9t8B2",
+      "name": "Racks"
+    }
+  ]
+}

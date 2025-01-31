@@ -1,0 +1,609 @@
+{
+  "name": "News Scraping",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "psmzw54y93zqg39",
+        "table": "mdoehkg5lmd65ag",
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "9781d8cc-0052-4ef0-8466-af98d41276f8",
+      "name": "NocoDB",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        800,
+        320
+      ],
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "RQ0TnLyxPfHMg8Sm",
+          "name": "NocoDB News Scraper"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.URL }}",
+        "options": {}
+      },
+      "id": "4d335b7e-fce1-42e5-b948-7383b6fc8bcf",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "id": "c29addb7-2a45-4d68-a6b4-b50d94f3f246",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        540,
+        840
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "MVltSHtuc5Fx0AiI",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "id": "0b889d0c-d600-47e0-8990-6e54d0b3dede",
+      "name": "OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        580,
+        1040
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "MVltSHtuc5Fx0AiI",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output",
+        "options": {}
+      },
+      "id": "8e87b4c1-544f-4a7c-b96f-14d3917bc31c",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        640
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "421b64d1-a871-484d-bd7b-70c0a6a9e780",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        580,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"title\": {\n        \"type\": \"string\",\n        \"description\": \"El titular de la noticia.\"\n      },\n      \"description\": {\n        \"type\": \"string\",\n        \"description\": \"Una breve descripcion de que va la noticia.\"\n      },\n      \"link\": {\n        \"type\": \"string\",\n        \"format\": \"uri\",\n        \"description\": \"Una URL vinculada a la fuente completa.\"\n      },\n      \"date\": {\n        \"type\": \"string\",\n        \"format\": \"date\",\n        \"description\": \"La fecha en la que se publicó la noticia.\"\n      }\n    },\n    \"required\": [\"title\", \"link\", \"date\"]\n  }\n}\n"
+      },
+      "id": "08448ba5-e210-4161-a717-58ad9d5d33a3",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        760,
+        1060
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "7d967ebf-d01b-484e-bd3e-e298085df305",
+      "name": "Auto-fixing Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "position": [
+        660,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "34d5a025-7a5d-4916-9099-afdffff74f19",
+              "leftValue": "={{ $json.date }}",
+              "rightValue": "={{ new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0] }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cd7b4260-08d9-4415-86ce-3a62a3766d94",
+      "name": "Filter Last Week",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        640
+      ],
+      "alwaysOutputData": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const htmlText = $json[\"data\"];\n\n// Usamos expresiones regulares para extraer el contenido del body\nconst bodyContentMatch = htmlText.match(/<body[^>]*>([\\s\\S]*?)<\\/body>/i);\n\nlet content = '';\n// Si encontramos el contenido del body, lo asignamos\nif (bodyContentMatch && bodyContentMatch[1]) {\n  content = bodyContentMatch[1];\n}\n\nconst mainContentMatch = content.match(/<main[^>]*>([\\s\\S]*?)<\\/main>/i);\nif (mainContentMatch && mainContentMatch[1]) {\n  content = mainContentMatch[1];\n}\n\nlet cleanHtml = content\n    .replace(/<header[\\s\\S]*?>[\\s\\S]*?<\\/header>/gi, '')  // Elimina <header> y su contenido\n    .replace(/<footer[\\s\\S]*?>[\\s\\S]*?<\\/footer>/gi, '')  // Elimina <footer> y su contenido\n    .replace(/<script[\\s\\S]*?>[\\s\\S]*?<\\/script>/gi, '')  // Elimina <script> y su contenido\n    .replace(/<ul[\\s\\S]*?>[\\s\\S]*?<\\/ul>/gi, '')          // Elimina <ul> y su contenido\n    .replace(/<nav[\\s\\S]*?>[\\s\\S]*?<\\/nav>/gi, '')        // Elimina <nav> y su contenido\n    .replace(/<[^>]+?\\/>/gi, '')\n    .replace(/\\s+(?!href\\b)[a-zA-Z-]+\\s*=\\s*[\"'][^\"']*[\"']/gi, '')\n    .replace(/<!--[\\s\\S]*?-->/gi, '')\n    // .replace(/[\\t\\n\\r]/gi, '')\n\nconsole.log(cleanHtml)\n\n// Retornamos el contenido del body\nreturn {\n  body: cleanHtml\n};"
+      },
+      "id": "f254744d-9b13-41b5-95a8-4376a7c12fb5",
+      "name": "Clean HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "function acortarTexto(texto) {\n    const maxLongitud = 10000; // 10,000 caracteres\n    if (texto.length > maxLongitud) {\n        return texto.substring(0, maxLongitud);\n    }\n    return texto;\n}\n\n// Ejemplo de uso\nconst textoLargo = $json.body;\nconst textoAcortado = acortarTexto(textoLargo);\n\nconsole.log(textoAcortado); // Imprime el texto acortado si supera el límite\n\nreturn {\n        json: {\n            textoAcortado: [textoAcortado]\n        }\n    };"
+      },
+      "id": "ccb26e7b-bb4a-40bc-a756-fb2f65de4972",
+      "name": "Limit length",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1420,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "newsletter",
+        "options": {}
+      },
+      "id": "1d8a8428-4f24-4e11-976b-f0d76ad182a0",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1420,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "id": "08a257a6-7ca1-4e89-b32c-9982ab7a5130",
+      "name": "OpenAI Chat Model2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1660,
+        820
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "MVltSHtuc5Fx0AiI",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c1464454-8112-46b7-8e7f-a2a803d832b8",
+      "name": "SerpAPI",
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        780
+      ],
+      "credentials": {
+        "serpApi": {
+          "id": "Ex2Hk69hM7F4Bzk0",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.textoAcortado }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Eres un asistente al que se le pasa un html correspondiente a un portal de noticias ({{ $('NocoDB').item.json['Site name'] }} - {{ $('NocoDB').item.json.URL }}) y tienes un listado de noticias con sus respectivos titulares, descripciones, enlaces y fechas de cada uno de los articulos.\n\n- No te inventes ni modifiques los enlaces a las fuentes. Si no lo consigues no añadas la noticia.\n- En ocasiones apareceran categorias con enlaces de referencia. Eso no son noticias.\n\nTu objetivo es extraer unica y exclusivamente las noticias.\n\nSi en alguna noticia aparece hace cuanto tiempo se ha publicado toma como referencia la fecha actual que es: {{ $today.format('yyyy-MM-dd') }}"
+            }
+          ]
+        }
+      },
+      "id": "1b3b027d-382a-456e-bf7f-40b6be8a1bb7",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        640,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=ROL\nEres un escritor de newsletters que escribe resumenes de noticias en un foro. \n\nINPUT\nA continuacion se te pasa las ultimas noticias de la semana con titulo, descripcion y link:\n{{ $json.newsletter.toJsonString() }}\n\nRESPUESTA\nTu respuesta tiene que ser siempre en formato markdown sin indicar el markdown tag.\n\nLa estructura de la respuesta tiene que ser con un titular grande de lo que ha pasado esta semana (elige la noticia mas relevante) y con una breve descripcion de todas las noticias.\n\nLa descripcion hazla dirigiendote a la comunidad del foro saludando con \"Buenas gente\".\n\nOBJETIVO\nTu tarea es escribir un articulo en español para un foro que resuma el conjunto de noticias y añada los enlaces a las noticias.\n\nSi tienes que completar informacion usando internet hazlo todas las veces que lo necesites usando la herramienta que tienes disponible.",
+        "options": {}
+      },
+      "id": "6c500f85-a057-44ad-8922-a7c8146cdaa0",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        1620,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://forum.racks.academy/posts.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Username",
+              "value": "rackslabs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "=Noticias de IA - {{ $today.format('yyyy-MM-dd') }}"
+            },
+            {
+              "name": "raw",
+              "value": "={{ $json.output }}"
+            },
+            {
+              "name": "category",
+              "value": "28"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "85f4650e-5551-45c2-ac6f-76127f1e4567",
+      "name": "Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2040,
+        560
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "JVUbMVdtkVJKav7i",
+          "name": "Discourse"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://forum.racks.academy/t/{{ $json.topic_id }}/status.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Username",
+              "value": "rackslabs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "pinned_globally"
+            },
+            {
+              "name": "enabled",
+              "value": "true"
+            },
+            {
+              "name": "until",
+              "value": "={{ $today.plus(7, 'days').format('yyyy-MM-dd') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6545de79-9bfd-4478-8c70-214b942e971a",
+      "name": "Pin for a week",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2260,
+        560
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "JVUbMVdtkVJKav7i",
+          "name": "Discourse"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "NocoDB": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Clean HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Filter Last Week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "NocoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-fixing Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Last Week": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean HTML": {
+      "main": [
+        [
+          {
+            "node": "Limit length",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit length": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post": {
+      "main": [
+        [
+          {
+            "node": "Pin for a week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "6782862a-3caf-489a-986d-87b99df89159",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9c4e017b49de9e586875a9b2861e43dc05e2d8c68e3bb75ddb56a52ad05cc641"
+  },
+  "id": "jc4kDD2yqCn5iOgw",
+  "tags": []
+}

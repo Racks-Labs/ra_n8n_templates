@@ -1,0 +1,309 @@
+{
+  "name": "Responder threads",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "09f30f8c-4a04-47ac-830b-6409c9fb4747",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0wPSSCq9zHlkOqwN",
+          "name": "Google Pruebas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "get",
+        "threadId": "={{ $json.threadId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        220,
+        0
+      ],
+      "id": "4a21bf08-a26a-4345-ad03-76d614a39c4b",
+      "name": "Gmail",
+      "webhookId": "5213396a-001c-489d-9409-72cfa8f3400e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0wPSSCq9zHlkOqwN",
+          "name": "Google Pruebas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "id": "ef16f06f-2766-45c9-bca4-c636626c11d7",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "810e757f-403c-419a-80c8-6276caa674b4",
+              "name": "content",
+              "value": "={{ $json.snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "18d79454-03f3-46c1-9404-ec4fb340fa28",
+              "name": "role",
+              "value": "={{ $json.From.search(\"jaime.freelance.aaa@gmail.com\") == -1 ? \"user\" : \"assistant\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        660,
+        0
+      ],
+      "id": "9f3cfe0c-4214-4d1d-ac84-f00b57a948e9",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o\",\n  \"messages\": {{ $json.data.toJsonString() }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        0
+      ],
+      "id": "9a6c21e4-ecef-43d8-a65c-2d88e44a001e",
+      "name": "HTTP Request",
+      "credentials": {
+        "openAiApi": {
+          "id": "YAB9aXvSyYRJ4h4u",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        900,
+        0
+      ],
+      "id": "37591a52-d2e9-4c7e-8f1a-4308f3076583",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener todos los items de entrada\nconst items = $input.all();\n\n// Procesar cada elemento\nconst updatedItems = items.map(item => {\n  // Asegurarse de que el campo \"data\" existe y es una lista\n  const data = item.json.data || [];\n\n  // Crear el nuevo elemento a añadir\n  const newElement = {\n    role: \"system\",\n    content: \"Mensaje de ejemplo\"\n  };\n\n  // Añadir el nuevo elemento al principio de la lista\n  item.json.data = [newElement, ...data];\n\n  return item;\n});\n\n// Devolver los items actualizados\nreturn updatedItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "ff4f1230-2c6d-4f63-87a1-9b8ee4f8cfeb",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $('Gmail').item.json.messages[0].Subject }}",
+        "message": "={{ $json.choices[0].message.content }}",
+        "options": {
+          "threadId": "={{ $('Gmail').item.json.messages[0].threadId }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "658442d9-c5fe-41d4-ba05-0b4f5c76846e",
+      "name": "Gmail1",
+      "webhookId": "b2796037-8a1f-416b-a097-c9c300c953fc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0wPSSCq9zHlkOqwN",
+          "name": "Google Pruebas"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "194a4a678c11c74d",
+          "threadId": "194a4a678c11c74d",
+          "snippet": "Hola Jaime como estas. Te saluda tu tocayo Un saludo, Jaime Serrano Jefe de Innovación - Racks Labs",
+          "payload": {
+            "mimeType": "multipart/alternative"
+          },
+          "sizeEstimate": 13660,
+          "historyId": "42782",
+          "internalDate": "1737929154000",
+          "labels": [
+            {
+              "id": "INBOX",
+              "name": "INBOX"
+            },
+            {
+              "id": "IMPORTANT",
+              "name": "IMPORTANT"
+            },
+            {
+              "id": "CATEGORY_PERSONAL",
+              "name": "CATEGORY_PERSONAL"
+            },
+            {
+              "id": "UNREAD",
+              "name": "UNREAD"
+            }
+          ],
+          "From": "Jaime Serrano <jaime.serrano@rackslabs.com>",
+          "To": "\"jaime.freelance.aaa@gmail.com\" <jaime.freelance.aaa@gmail.com>",
+          "Subject": "Hola Jaime"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Gmail1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "95387acb-912f-4dd1-821f-566a1d9b3034",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "35a1948850f9a6bc147706cde48f1fd24bb726cba79bbc66cdf3a258904b6356"
+  },
+  "id": "qjjEH2Zpvw6rivhI",
+  "tags": []
+}
